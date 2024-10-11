@@ -36,6 +36,7 @@ def buscar_id_jogador(nome_jogador):
         resultados = [jogador for jogador in jogadores if nome_jogador.lower() in jogador[1].lower()]
 
         if resultados:
+            print('\n')
             print("Jogadores encontrados:")
             for i, jogador in enumerate(resultados):
                 print(f"{i + 1}. {jogador[1]} (ID: {jogador[0]})")
@@ -213,6 +214,7 @@ def buscar_id_time(nome_time):
     resultados = [team for team in teams if nome_time.lower() in (team[1].lower(), team[2].lower(), team[5].lower())]
 
     if resultados:
+        print('\n')
         print("Times encontrados:")
         for i, team in enumerate(resultados):
             print(f"{i + 1}. {team[2]} (ID: {team[0]})")
@@ -397,6 +399,7 @@ if __name__ == "__main__":
                 print("Não foi possível obter as estatísticas do time.")
         
         sair_opcao = input("Deseja sair do programa? Digite 's' para sair ou qualquer outra tecla para continuar: ").lower()
+        print('\n')
         if sair_opcao == 's':
             sair = True
 
