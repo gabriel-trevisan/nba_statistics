@@ -392,7 +392,7 @@ if __name__ == "__main__":
 
             if dados_estatisticas_time:
                 # Se as estatísticas foram retornadas com sucesso, exportamos para Excel
-                exportar_estatisticas_time(dados_estatisticas_time, f"estatisticas_time_{nome_time}_{data_hora_atual}.xlsx")
+                exportar_estatisticas_time(dados_estatisticas_time, f"estatisticas_time_{nome_time}_{data_hora_atual}.xlsx", qtd_registros)
             else:
                 print("Não foi possível obter as estatísticas do time.")
         
