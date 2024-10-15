@@ -272,8 +272,48 @@ def buscar_pontos_jogo(game_id, team_id):
     
     return stat
 
+def verificar_prazo_pagamento(data_limite_str):
+    """
+    Verifica se a data atual obtida de um servidor externo está dentro do prazo de pagamento.
+
+    :param data_limite_str: A data limite para pagamento no formato 'YYYY-MM-DD'.
+    :return: True se a data atual está dentro do prazo, False caso contrário.
+    """
+    # URL da API que retorna a hora atual
+    url = 'http://worldtimeapi.org/api/ip'
+
+    # Converte a data limite para um objeto datetime
+    data_limite = datetime.strptime(data_limite_str, '%Y-%m-%d')
+
+    try:
+        # Faz uma solicitação à API de hora mundial
+        response = requests.get(url)
+        response.raise_for_status()  # Verifica se a resposta foi bem-sucedida
+
+        # Obtém a hora UTC atual do servidor
+        dados = response.json()
+        data_servidor_str = dados['datetime']
+
+        # Converte a string da data do servidor para um objeto datetime
+        data_atual_servidor = datetime.strptime(data_servidor_str, '%Y-%m-%dT%H:%M:%S.%f%z')
+
+        # Verifica se a data atual do servidor passou da data limite
+        if data_atual_servidor.date() > data_limite.date():
+            return False  # Prazo expirado
+        else:
+            return True   # Dentro do prazo
+
+    except requests.exceptions.RequestException as e:
+        print(f"Erro ao consultar a data no servidor: {e}")
+        return False  # Em caso de erro, trate como se o prazo tivesse expirado
+
 if __name__ == "__main__":
     sair = False
+
+    # Verifica se a data atual passou da data limite
+    if not verificar_prazo_pagamento('2024-11-30'):
+        print("O prazo para pagamento expirou. O programa não será executado.")
+        exit()  # Encerra o programa
 
     while not sair:
         data_hora_atual = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
