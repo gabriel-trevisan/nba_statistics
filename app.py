@@ -10,7 +10,7 @@ API_URL_TEAM_GAMELOGS = "https://stats.nba.com/stats/teamgamelogs"
 API_URL_BOXSCORE_SUMMARY = "https://stats.nba.com/stats/boxscoresummaryv2"
 
 # Definir as temporadas fixas
-temporadas = ["2023-24", "2024-25"]
+temporadas = ["2024-25", "2023-24"]
 header_boxscore_line_score = None
 
 # Função para buscar o ID de um jogador pelo nome
@@ -61,73 +61,37 @@ def buscar_id_jogador(nome_jogador):
 
 # Função para buscar estatísticas do jogador
 def buscar_estatisticas_jogador(player_id):
-    headers = {
+    headerRequest = {
         "Referer": "https://www.nba.com/",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36"
     }
 
-    # Parâmetros para Regular Season
-    params_regular_season_1 = {
-        "PlayerID": player_id,
-        "Season": temporadas[0],
-        "SeasonType": "Regular Season"
+    stats = []
+    
+    for temporada in temporadas:
+        for season_type in ["Pre Season", "Regular Season", "Playoffs"]:
+            params = {
+                "PlayerID": player_id, 
+                "Season": temporada, 
+                "SeasonType": season_type
+            }
+            response = requests.get(API_URL_STATS, headers=headerRequest, params=params)
+
+            if response.status_code == 200:
+                stats = stats + response.json()['resultSets'][0]['rowSet']
+                headers = response.json()['resultSets'][0]['headers']
+            else:
+                print(f"Erro ao buscar estatísticas do jogador para {temporada} {season_type}.")
+                return None
+
+    resultado_agrupado = {
+        'resultSets': [{
+            'headers': headers,
+            'rowSet': stats
+        }]
     }
 
-    params_playoffs_1 = {
-        "PlayerID": player_id,
-        "Season": temporadas[0],
-        "SeasonType": "Playoffs"
-    }
-
-    params_regular_season_2 = {
-        "PlayerID": player_id,
-        "Season": temporadas[1],
-        "SeasonType": "Regular Season"
-    }
-
-    params_playoffs_2 = {
-        "PlayerID": player_id,
-        "Season": temporadas[1],
-        "SeasonType": "Playoffs"
-    }
-
-    response_regular_1 = requests.get(API_URL_STATS, headers=headers, params=params_regular_season_1)
-    response_playoffs_1 = requests.get(API_URL_STATS, headers=headers, params=params_playoffs_1)
-    response_regular_2 = requests.get(API_URL_STATS, headers=headers, params=params_regular_season_2)
-    response_playoffs_2 = requests.get(API_URL_STATS, headers=headers, params=params_playoffs_2)
-
-    # Verifica se ambas as requisições foram bem-sucedidas
-    if response_regular_1.status_code == 200 and response_playoffs_1.status_code == 200 and response_regular_2.status_code == 200 and response_playoffs_2.status_code == 200:
-        data_regular_1 = response_regular_1.json()
-        data_playoffs_1 = response_playoffs_1.json()
-        data_regular_2 = response_regular_2.json()
-        data_playoffs_2 = response_playoffs_2.json()
-
-        # Extrai as estatísticas de cada temporada
-        result_set_regular_1 = data_regular_1['resultSets'][0]
-        result_set_playoffs_1 = data_playoffs_1['resultSets'][0]
-
-        result_set_regular_2 = data_regular_2['resultSets'][0]
-        result_set_playoffs_2 = data_playoffs_2['resultSets'][0]
-
-        # Os headers devem ser os mesmos entre as duas temporadas
-        headers = result_set_regular_1['headers']
-
-        # Concatena os dados de 'rowSet' das duas temporadas
-        row_set_agrupado = result_set_playoffs_1['rowSet'] + result_set_regular_1['rowSet'] + result_set_playoffs_2['rowSet'] + result_set_regular_2['rowSet']
-
-        # Retorna os dados agrupados mantendo o cabeçalho
-        resultado_agrupado = {
-            'resultSets': [{
-                'headers': headers,
-                'rowSet': row_set_agrupado
-            }]
-        }
-
-        return resultado_agrupado
-    else:
-        print(f"Erro nas requisições para buscar estatística do jogo")
-        return None
+    return resultado_agrupado
 
 def exportar_para_excel(dados, nome_arquivo, qtd_registros=10):
     print('Por favor aguarde... exportando estatísticas...')
@@ -235,71 +199,38 @@ def buscar_id_time(nome_time):
     
 # Função para buscar estatísticas do time
 def buscar_estatisticas_time(team_id, qtd_registros):
-    headers = {
+    headerRequest = {
         "Referer": "https://www.nba.com/",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36"
     }
 
-    params_regular_season_1 = {
-        "TeamID": team_id,
-        "Season": temporadas[0],
-        "SeasonType": "Regular Season"
-    }
-
-    params_playoffs_1 = {
-        "TeamID": team_id,
-        "Season": temporadas[0],
-        "SeasonType": "Playoffs"
-    }
-
-    params_regular_season_2 = {
-        "TeamID": team_id,
-        "Season": temporadas[1],
-        "SeasonType": "Regular Season"
-    }
-
-    params_playoffs_2 = {
-        "TeamID": team_id,
-        "Season": temporadas[1],
-        "SeasonType": "Playoffs"
-    }
-
-    response_regular_season_1 = requests.get(API_URL_TEAM_GAMELOGS, headers=headers, params=params_regular_season_1)
-    response_playoffs_1 = requests.get(API_URL_TEAM_GAMELOGS, headers=headers, params=params_playoffs_1)
-    response_regular_season_2 = requests.get(API_URL_TEAM_GAMELOGS, headers=headers, params=params_regular_season_2)
-    response_playoffs_2 = requests.get(API_URL_TEAM_GAMELOGS, headers=headers, params=params_playoffs_2)
-    
+    stats = []
     stats_list = []
-    if response_regular_season_1.status_code == 200 and response_playoffs_1.status_code == 200 and response_regular_season_2.status_code == 200 and response_playoffs_2.status_code == 200:
-        
-        data_regular_season_1 = response_regular_season_1.json()
-        data_playoffs_1 = response_playoffs_1.json()
-        
-        data_regular_season_2 = response_regular_season_2.json()
-        data_playoffs_2 = response_playoffs_2.json()
-
-        result_set_regular_1 = data_regular_season_1['resultSets'][0]
-        result_set_playoffs_1 = data_playoffs_1['resultSets'][0]
-
-        result_set_regular_2 = data_regular_season_2['resultSets'][0]
-        result_set_playoffs_2 = data_playoffs_2['resultSets'][0]
-
-        headers = result_set_regular_1['headers']
-
-        row_set_agrupado = result_set_playoffs_1['rowSet'] + result_set_regular_1['rowSet'] + result_set_playoffs_2['rowSet'] + result_set_regular_2['rowSet']
-        
-        gamesLimited = row_set_agrupado[:int(qtd_registros)]
-        
-        for game in gamesLimited:
-            game_id = game[4]  # Game_ID está no índice 2
-
-            print(f"Buscando estatísticas do jogo {game_id} ...")
-            row_data = buscar_pontos_jogo(game_id, team_id)
-            stats_list.append(row_data)
-    else:
-        print(f"Erro nas requisições de estatísticas.")
-        return None
     
+    for temporada in temporadas:
+        for season_type in ["Pre Season", "Regular Season", "Playoffs"]:
+            params = {
+                "TeamID": team_id, 
+                "Season": temporada, 
+                "SeasonType": season_type
+            }
+            response = requests.get(API_URL_TEAM_GAMELOGS, headers=headerRequest, params=params)
+
+            if response.status_code == 200:
+                stats = stats + response.json()['resultSets'][0]['rowSet']
+            else:
+                print(f"Erro ao buscar estatísticas do jogador para {temporada} {season_type}.")
+                return None
+
+    gamesLimited = stats[:int(qtd_registros)]
+
+    for game in gamesLimited:
+        game_id = game[4]  # Game_ID está no índice 2
+
+        print(f"Buscando estatísticas do jogo {game_id} ...")
+        row_data = buscar_pontos_jogo(game_id, team_id)
+        stats_list.append(row_data)
+
     resultado_agrupado = {
         'resultSets': [{
             'headers': header_boxscore_line_score,
