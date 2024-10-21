@@ -311,9 +311,9 @@ if __name__ == "__main__":
     sair = False
 
     # Verifica se a data atual passou da data limite
-    if not verificar_prazo_pagamento('2024-11-30'):
-        print("O prazo para pagamento expirou. O programa não será executado.")
-        exit()  # Encerra o programa
+    # if not verificar_prazo_pagamento('2024-11-30'):
+    #     print("O prazo para pagamento expirou. O programa não será executado.")
+    #     exit()  # Encerra o programa
 
     while not sair:
         data_hora_atual = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
