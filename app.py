@@ -3,13 +3,11 @@ import pandas as pd
 from data.teams import teams
 from datetime import datetime
 
-# Definindo a URL da API NBA para estatísticas de jogadores
 API_URL_STATS = "https://stats.nba.com/stats/playergamelogs"
 API_URL_PLAYER_SEARCH = "https://stats.nba.com/stats/commonallplayers"
 API_URL_TEAM_GAMELOGS = "https://stats.nba.com/stats/teamgamelogs"
 API_URL_BOXSCORE_SUMMARY = "https://stats.nba.com/stats/boxscoresummaryv2"
 
-# Definir as temporadas fixas
 temporadas = ["2024-25", "2023-24"]
 header_boxscore_line_score = None
 
@@ -21,8 +19,8 @@ def buscar_id_jogador(nome_jogador):
     }
 
     params = {
-        "IsOnlyCurrentSeason": "0",  # 0 para jogadores de todas as temporadas
-        "LeagueID": "00",  # NBA
+        "IsOnlyCurrentSeason": "0", # 0 para jogadores de todas as temporadas
+        "LeagueID": "00", # NBA
         "Season": "2024-25" 
     }
 
@@ -32,7 +30,6 @@ def buscar_id_jogador(nome_jogador):
         data = response.json()
         jogadores = data['resultSets'][0]['rowSet']
 
-        # Procurar jogador pelo nome (ou parte dele)
         resultados = [jogador for jogador in jogadores if nome_jogador.lower() in jogador[1].lower()]
 
         if resultados:
@@ -41,7 +38,6 @@ def buscar_id_jogador(nome_jogador):
             for i, jogador in enumerate(resultados):
                 print(f"{i + 1}. {jogador[1]} (ID: {jogador[0]})")
             
-            # Permitir que o usuário selecione o jogador correto
             while True:
                 try:
                     escolha = int(input("Escolha o número do jogador: ")) - 1
@@ -93,12 +89,9 @@ def buscar_estatisticas_jogador(player_id):
 
     return resultado_agrupado
 
-def exportar_para_excel(dados, nome_arquivo, qtd_registros=10):
+# Exporta as estatísticas em formato Excel
+def exportar_estatisticas(dados, nome_arquivo, colunas, qtd_registros=10, calcular_combinacoes=False):
     print('Por favor aguarde... exportando estatísticas...')
-
-    colunas = [
-        'GAME_DATE', 'PTS', 'REB', 'AST', 'FGA', 'FGM', 'FG3M', 'TOV', 'PF'
-    ]
 
     headers = dados['resultSets'][0]['headers']
     row_data = dados['resultSets'][0]['rowSet']
@@ -110,65 +103,28 @@ def exportar_para_excel(dados, nome_arquivo, qtd_registros=10):
         stats = {colunas[i]: game[indices_desejados[i]] for i in range(len(indices_desejados))}
         stats_list.append(stats)
 
-    # Limitar a lista ao número de registros fornecido pelo usuário
     stats_list = stats_list[:int(qtd_registros)]
 
-    # Criar o DataFrame
     df = pd.DataFrame(stats_list, columns=colunas)
 
-    # Adicionar as colunas com as somas PTS+REB+AST, PTS+REB e PTS+AST
-    df['PTS+REB+AST'] = df['PTS'] + df['REB'] + df['AST']
-    df['PTS+REB'] = df['PTS'] + df['REB']
-    df['PTS+AST'] = df['PTS'] + df['AST']
+    # Adiciona colunas combinadas, se necessário
+    if calcular_combinacoes:
+        if 'PTS' in df and 'REB' in df and 'AST' in df:
+            df['PTS+REB+AST'] = df['PTS'] + df['REB'] + df['AST']
+        if 'PTS' in df and 'REB' in df:
+            df['PTS+REB'] = df['PTS'] + df['REB']
+        if 'PTS' in df and 'AST' in df:
+            df['PTS+AST'] = df['PTS'] + df['AST']
 
-    # Calcular as médias para colunas numéricas, ignorando a coluna GAME_DATE
-    medias = {col: df[col].mean() for col in df.columns if col != 'GAME_DATE'}
-
-    # Adicionar as médias ao DataFrame (preenchendo a coluna 'GAME_DATE' com 'Média')
-    medias['GAME_DATE'] = 'Média'
+    # Calcula médias para as colunas numéricas
+    medias = {col: df[col].mean() for col in df.columns if col != 'GAME_DATE_EST' and col != 'GAME_DATE'}
+    medias[colunas[0]] = 'Média'  # Assume que a primeira coluna é a de data
     df_medias = pd.DataFrame([medias])
 
-    # Concatenar a linha de médias ao DataFrame original
+    # Concatena o DataFrame com as médias ao final
     df = pd.concat([df, df_medias], ignore_index=True)
 
-    # Exportar para o Excel
-    df.to_excel(nome_arquivo, index=False)
-    print(f"Estatísticas exportadas com sucesso para {nome_arquivo}")
-
-def exportar_estatisticas_time(dados, nome_arquivo, qtd_registros=10):
-    print('Por favor aguarde... exportando estatísticas...')
-
-    colunas = [
-        'GAME_DATE_EST', 'PTS_QTR1', 'PTS_QTR2', 'PTS_QTR3', 'PTS_QTR4', 'PTS'
-    ]
-
-    headers = dados['resultSets'][0]['headers']
-    row_data = dados['resultSets'][0]['rowSet']
-    
-    indices_desejados = [headers.index(col) for col in colunas if col in headers]
-
-    stats_list = []
-    for game in row_data:
-        stats = {colunas[i]: game[indices_desejados[i]] for i in range(len(indices_desejados))}
-        stats_list.append(stats)
-
-    # Limitar a lista ao número de registros fornecido pelo usuário
-    stats_list = stats_list[:int(qtd_registros)]
-
-    # Criar o DataFrame
-    df = pd.DataFrame(stats_list, columns=colunas)
-
-    # Calcular as médias para colunas numéricas, ignorando a coluna GAME_DATE_EST
-    medias = {col: df[col].mean() for col in df.columns if col != 'GAME_DATE_EST'}
-
-    # Adicionar as médias ao DataFrame (preenchendo a coluna 'GAME_DATE' com 'Média')
-    medias['GAME_DATE_EST'] = 'Média'
-    df_medias = pd.DataFrame([medias])
-
-    # Concatenar a linha de médias ao DataFrame original
-    df = pd.concat([df, df_medias], ignore_index=True)
-
-    # Exportar para o Excel
+    # Exporta para Excel
     df.to_excel(nome_arquivo, index=False)
     print(f"Estatísticas exportadas com sucesso para {nome_arquivo}")
 
@@ -183,7 +139,6 @@ def buscar_id_time(nome_time):
         for i, team in enumerate(resultados):
             print(f"{i + 1}. {team[2]} (ID: {team[0]})")
         
-        # Permitir que o usuário selecione o time correto
         while True:
             try:
                 escolha = int(input("Escolha o número do time: ")) - 1
@@ -240,6 +195,7 @@ def buscar_estatisticas_time(team_id, qtd_registros):
 
     return resultado_agrupado
 
+# Busca pontos do jogo
 def buscar_pontos_jogo(game_id, team_id):
     global header_boxscore_line_score
 
@@ -272,48 +228,8 @@ def buscar_pontos_jogo(game_id, team_id):
     
     return stat
 
-def verificar_prazo_pagamento(data_limite_str):
-    """
-    Verifica se a data atual obtida de um servidor externo está dentro do prazo de pagamento.
-
-    :param data_limite_str: A data limite para pagamento no formato 'YYYY-MM-DD'.
-    :return: True se a data atual está dentro do prazo, False caso contrário.
-    """
-    # URL da API que retorna a hora atual
-    url = 'http://worldtimeapi.org/api/ip'
-
-    # Converte a data limite para um objeto datetime
-    data_limite = datetime.strptime(data_limite_str, '%Y-%m-%d')
-
-    try:
-        # Faz uma solicitação à API de hora mundial
-        response = requests.get(url)
-        response.raise_for_status()  # Verifica se a resposta foi bem-sucedida
-
-        # Obtém a hora UTC atual do servidor
-        dados = response.json()
-        data_servidor_str = dados['datetime']
-
-        # Converte a string da data do servidor para um objeto datetime
-        data_atual_servidor = datetime.strptime(data_servidor_str, '%Y-%m-%dT%H:%M:%S.%f%z')
-
-        # Verifica se a data atual do servidor passou da data limite
-        if data_atual_servidor.date() > data_limite.date():
-            return False  # Prazo expirado
-        else:
-            return True   # Dentro do prazo
-
-    except requests.exceptions.RequestException as e:
-        print(f"Erro ao consultar a data no servidor: {e}")
-        return False  # Em caso de erro, trate como se o prazo tivesse expirado
-
 if __name__ == "__main__":
     sair = False
-
-    # Verifica se a data atual passou da data limite
-    # if not verificar_prazo_pagamento('2024-11-30'):
-    #     print("O prazo para pagamento expirou. O programa não será executado.")
-    #     exit()  # Encerra o programa
 
     while not sair:
         data_hora_atual = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -331,41 +247,53 @@ if __name__ == "__main__":
                 print("Entrada inválida! Por favor, insira um número inteiro positivo.")
 
         if escolha == '1':
-            # Permitir que o usuário insira o nome do jogador
             nome_jogador = input("Digite o nome do jogador: ")
 
-            # Busca o ID do jogador pelo nome
             player_id = buscar_id_jogador(nome_jogador)
 
             if player_id is None:
-                # Se não encontrar o jogador, permitir a inserção manual do ID
                 player_id = input("Não foi possível acessar a API, insira o ID do jogador manualmente: ")
 
-            # Agora buscamos as estatísticas do jogador
             dados_estatisticas = buscar_estatisticas_jogador(player_id)
 
             if dados_estatisticas:
-                # Se as estatísticas foram retornadas com sucesso, exportamos para Excel
-                exportar_para_excel(dados_estatisticas, f"estatisticas_jogador_{nome_jogador}_{data_hora_atual}.xlsx", qtd_registros)
+                
+                colunas = [
+                    'GAME_DATE', 'PTS', 'REB', 'AST', 'FGA', 'FGM', 'FG3M', 'TOV', 'PF'
+                ]
+
+                exportar_estatisticas(
+                    dados_estatisticas, 
+                    f"estatisticas_jogador_{nome_jogador}_{data_hora_atual}.xlsx", 
+                    colunas, 
+                    qtd_registros,
+                    calcular_combinacoes=True
+                )
             else:
                 print("Não foi possível obter as estatísticas do jogador.")
+        
         elif escolha == '2':
-            # Permitir que o usuário insira o nome do time
             nome_time = input("Digite o nome do time: ")
 
-            # Busca o ID do time pelo nome
             team_id = buscar_id_time(nome_time)
 
             if team_id is None:
-                # Se não encontrar o time, permitir a inserção manual do ID
                 team_id = input("Não foi encontrado o time, insira o ID do time manualmente: ")
 
-            # Agora buscamos as estatísticas do time
             dados_estatisticas_time = buscar_estatisticas_time(team_id, qtd_registros)
 
             if dados_estatisticas_time:
-                # Se as estatísticas foram retornadas com sucesso, exportamos para Excel
-                exportar_estatisticas_time(dados_estatisticas_time, f"estatisticas_time_{nome_time}_{data_hora_atual}.xlsx", qtd_registros)
+                
+                colunas = [
+                    'GAME_DATE_EST', 'PTS_QTR1', 'PTS_QTR2', 'PTS_QTR3', 'PTS_QTR4', 'PTS'
+                ]
+
+                exportar_estatisticas(
+                    dados_estatisticas_time, 
+                    f"estatisticas_time_{nome_time}_{data_hora_atual}.xlsx", 
+                    colunas, 
+                    qtd_registros
+                )
             else:
                 print("Não foi possível obter as estatísticas do time.")
         
