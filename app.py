@@ -65,7 +65,7 @@ def buscar_estatisticas_jogador(player_id):
     stats = []
     
     for temporada in temporadas:
-        for season_type in ["Pre Season", "Regular Season", "Playoffs"]:
+        for season_type in ["Playoffs", "Regular Season", "Pre Season"]:
             params = {
                 "PlayerID": player_id, 
                 "Season": temporada, 
@@ -163,7 +163,7 @@ def buscar_estatisticas_time(team_id, qtd_registros):
     stats_list = []
     
     for temporada in temporadas:
-        for season_type in ["Pre Season", "Regular Season", "Playoffs"]:
+        for season_type in ["Playoffs", "Regular Season", "Pre Season"]:
             params = {
                 "TeamID": team_id, 
                 "Season": temporada, 
@@ -174,7 +174,7 @@ def buscar_estatisticas_time(team_id, qtd_registros):
             if response.status_code == 200:
                 stats = stats + response.json()['resultSets'][0]['rowSet']
             else:
-                print(f"Erro ao buscar estatísticas do jogador para {temporada} {season_type}.")
+                print(f"Erro ao buscar estatísticas do time para {temporada} {season_type}.")
                 return None
 
     gamesLimited = stats[:int(qtd_registros)]
