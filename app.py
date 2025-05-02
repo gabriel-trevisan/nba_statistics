@@ -116,8 +116,17 @@ def exportar_estatisticas(dados, nome_arquivo, colunas, qtd_registros=10, calcul
         if 'PTS' in df and 'AST' in df:
             df['PTS+AST'] = df['PTS'] + df['AST']
 
+    # Arredondar coluna MIN
+    if 'MIN' in df.columns:
+        df['MIN'] = df['MIN'].apply(lambda x: round(x) if pd.notnull(x) else None)
+
     # Calcula médias para as colunas numéricas
-    medias = {col: df[col].mean() for col in df.columns if col != 'GAME_DATE_EST' and col != 'GAME_DATE'}
+    medias = {
+        col: df[col].mean() 
+        for col in df.columns 
+        if col not in ['GAME_DATE_EST' , 'GAME_DATE']
+    }
+    
     medias[colunas[0]] = 'Média'  # Assume que a primeira coluna é a de data
     df_medias = pd.DataFrame([medias])
 
@@ -228,8 +237,33 @@ def buscar_pontos_jogo(game_id, team_id):
     
     return stat
 
+def verificar_prazo_expiracao(data_limite_str):
+    """
+    Verifica se a data atual obtida de um servidor externo está dentro do prazo de expiração.
+
+    :param data_limite_str: A data limite para expiração no formato 'YYYY-MM-DD'.
+    :return: True se a data atual está dentro do prazo, False caso contrário.
+    """
+    try:
+        response = requests.head("https://www.google.com", timeout=5)
+        date_header = response.headers['Date']  # Ex: 'Fri, 03 May 2025 13:44:50 GMT'
+        data_servidor = datetime.strptime(date_header, '%a, %d %b %Y %H:%M:%S GMT')
+        data_limite = datetime.strptime(data_limite_str, '%Y-%m-%d')
+
+        return data_servidor.date() <= data_limite.date()
+    except Exception as e:
+        print(f"Erro ao obter data do cabeçalho HTTP: {e}")
+        return False
+
 if __name__ == "__main__":
     sair = False
+
+    data_expiracao = '2025-06-02'
+
+    # Verifica se a data atual passou da data de expiração
+    if not verificar_prazo_expiracao(data_expiracao):
+        print("Esta versão expirou! O programa não será executado. Data Expiração: " + data_expiracao)
+        exit()  # Encerra o programa
 
     while not sair:
         data_hora_atual = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -259,7 +293,7 @@ if __name__ == "__main__":
             if dados_estatisticas:
                 
                 colunas = [
-                    'GAME_DATE', 'PTS', 'REB', 'AST', 'FGA', 'FGM', 'FG3M', 'TOV', 'PF'
+                    'GAME_DATE', 'MIN', 'PTS', 'REB', 'AST', 'FGA', 'FGM', 'FG3M', 'TOV', 'PF'
                 ]
 
                 exportar_estatisticas(
